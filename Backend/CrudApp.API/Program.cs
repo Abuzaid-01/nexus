@@ -17,7 +17,17 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
     ?? "Data Source=crudapp.db";
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlite(connectionString));
+{
+    if (connectionString.Contains("Host=", StringComparison.OrdinalIgnoreCase)
+        || connectionString.Contains("postgres", StringComparison.OrdinalIgnoreCase))
+    {
+        options.UseNpgsql(connectionString);
+    }
+    else
+    {
+        options.UseSqlite(connectionString);
+    }
+});
 
 // Configure JWT Authentication
 var jwtKey = builder.Configuration["Jwt:Key"] ?? "YourSuperSecretKeyThatIsAtLeast32CharactersLong!";
