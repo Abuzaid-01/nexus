@@ -397,6 +397,8 @@
   border-top: 1px solid rgba(255, 255, 255, 0.06);
   display: flex;
   justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .quick-demo-pill {
@@ -412,6 +414,18 @@
   font-weight: 500;
   cursor: pointer;
   transition: all 0.15s ease;
+}
+
+.quick-demo-pill.instant-pill {
+  background: rgba(16, 185, 129, 0.08);
+  border-color: rgba(16, 185, 129, 0.25);
+  color: #34d399;
+}
+
+.quick-demo-pill.instant-pill:hover {
+  background: rgba(16, 185, 129, 0.2);
+  border-color: rgba(16, 185, 129, 0.4);
+  color: #6ee7b7;
 }
 
 .quick-demo-pill:hover {

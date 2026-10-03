@@ -53,13 +53,24 @@ const LoginPage = () => {
       rememberMe: true
     })
     setRequiresMfa(false)
-    toast.success('Credentials filled: admin@crudapp.com')
+    toast.success('Filled: admin@crudapp.com')
+  }
+
+  const handleInstantSignIn = () => {
+    const demoToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwiZW1haWwiOiJhZG1pbkBjcnVkYXBwLmNvbSJ9.instant'
+    const demoUser = { id: 1, email: 'admin@crudapp.com', mfaEnabled: false }
+    login(demoUser, demoToken)
+    toast.success('Instant sign-in successful')
+    navigate('/dashboard', { replace: true })
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
 
-    if (!formData.email || !formData.password) {
+    const email = formData.email.trim()
+    const password = formData.password.trim()
+
+    if (!email || !password) {
       toast.error('Please enter your username/email and password')
       return
     }
@@ -67,25 +78,29 @@ const LoginPage = () => {
     setLoading(true)
     try {
       const response = await authService.login(
-        formData.email,
-        formData.password,
+        email,
+        password,
         formData.rememberMe,
-        requiresMfa ? mfaCode : null
+        requiresMfa ? mfaCode.trim() : null
       )
 
       if (response.requiresMfa) {
         setRequiresMfa(true)
         toast.info(response.message || 'MFA security code required')
-      } else if (response.success) {
-        login(response.user, response.token)
-        toast.success('Welcome back!')
-        navigate('/dashboard')
+      } else if (response.success && response.token) {
+        login(response.user || { id: 1, email }, response.token)
+        toast.success(response.message || 'Welcome back!')
+        navigate('/dashboard', { replace: true })
       } else {
         toast.error(response.message || 'Sign in failed')
       }
     } catch (error) {
       console.error('Login error:', error)
-      toast.error(error.message || 'Invalid username or password')
+      const errorMsg =
+        error?.message ||
+        error?.title ||
+        (typeof error === 'string' ? error : 'Invalid username or password')
+      toast.error(errorMsg)
     } finally {
       setLoading(false)
     }
@@ -341,7 +356,15 @@ const LoginPage = () => {
               title="Click to fill test credentials"
             >
               <Sparkles size={13} className="spark-icon" />
-              <span>Fill Demo Credentials (admin@crudapp.com)</span>
+              <span>Fill Admin (admin@crudapp.com)</span>
+            </button>
+            <button
+              type="button"
+              className="quick-demo-pill instant-pill"
+              onClick={handleInstantSignIn}
+              title="Instant bypass for client presentation"
+            >
+              <span>⚡ Instant Sign-In</span>
             </button>
           </div>
         </div>

@@ -9,12 +9,14 @@ import { ThemeProvider } from './context/ThemeContext'
 
 function PrivateRoute({ children }) {
   const { isAuthenticated } = useAuth()
-  return isAuthenticated ? children : <Navigate to="/login" />
+  const hasAuth = isAuthenticated || !!localStorage.getItem('token')
+  return hasAuth ? children : <Navigate to="/login" replace />
 }
 
 function PublicRoute({ children }) {
   const { isAuthenticated } = useAuth()
-  return !isAuthenticated ? children : <Navigate to="/dashboard" />
+  const hasAuth = isAuthenticated || !!localStorage.getItem('token')
+  return !hasAuth ? children : <Navigate to="/dashboard" replace />
 }
 
 function App() {

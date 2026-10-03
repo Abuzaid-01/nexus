@@ -12,35 +12,48 @@ export const useAuth = () => {
 }
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null)
-  const [token, setToken] = useState(localStorage.getItem('token'))
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [loading, setLoading] = useState(true)
+  const [token, setToken] = useState(() => localStorage.getItem('token'))
+  const [user, setUser] = useState(() => {
+    try {
+      const saved = localStorage.getItem('user')
+      return saved ? JSON.parse(saved) : null
+    } catch {
+      return null
+    }
+  })
+  const [isAuthenticated, setIsAuthenticated] = useState(() => !!localStorage.getItem('token'))
+  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     if (token) {
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`
       setIsAuthenticated(true)
-      // Optionally validate token here
     } else {
       setIsAuthenticated(false)
+      delete axios.defaults.headers.common['Authorization']
     }
-    setLoading(false)
   }, [token])
 
   const login = (userData, authToken) => {
+    // 1. Immediately persist to localStorage first so any route navigation checks succeed instantly
+    localStorage.setItem('token', authToken)
+    if (userData) {
+      localStorage.setItem('user', JSON.stringify(userData))
+    }
+    axios.defaults.headers.common['Authorization'] = `Bearer ${authToken}`
+
+    // 2. Update state
     setUser(userData)
     setToken(authToken)
     setIsAuthenticated(true)
-    localStorage.setItem('token', authToken)
-    axios.defaults.headers.common['Authorization'] = `Bearer ${authToken}`
   }
 
   const logout = () => {
+    localStorage.removeItem('token')
+    localStorage.removeItem('user')
     setUser(null)
     setToken(null)
     setIsAuthenticated(false)
-    localStorage.removeItem('token')
     delete axios.defaults.headers.common['Authorization']
   }
 
@@ -55,3 +68,5 @@ export const AuthProvider = ({ children }) => {
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
+
+export default AuthContext
