@@ -37,6 +37,11 @@ const LoginPage = () => {
   const [showForgotPassword, setShowForgotPassword] = useState(false)
   const [forgotEmail, setForgotEmail] = useState('')
 
+  // Pre-warm live backend on mount to reduce Render free-tier spin-up latency
+  useEffect(() => {
+    fetch('https://nexus-api-vpkv.onrender.com/api/records').catch(() => {})
+  }, [])
+
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target
     setFormData(prev => ({
@@ -57,10 +62,10 @@ const LoginPage = () => {
   }
 
   const handleInstantSignIn = () => {
-    const demoToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwiZW1haWwiOiJhZG1pbkBjcnVkYXBwLmNvbSJ9.instant'
-    const demoUser = { id: 1, email: 'admin@crudapp.com', mfaEnabled: false }
+    const demoToken = 'demo_session_instant_' + Date.now()
+    const demoUser = { id: 1, email: 'admin@crudapp.com', mfaEnabled: false, role: 'Administrator (Demo)' }
     login(demoUser, demoToken)
-    toast.success('Instant sign-in successful')
+    toast.success('Instant sign-in successful (Demo Mode)')
     navigate('/dashboard', { replace: true })
   }
 
@@ -276,7 +281,7 @@ const LoginPage = () => {
                 {loading ? (
                   <span className="loading-state">
                     <RefreshCw size={16} className="spin-fast" />
-                    Authenticating...
+                    Connecting to Cloud API...
                   </span>
                 ) : (
                   <span className="btn-content">
@@ -285,6 +290,11 @@ const LoginPage = () => {
                   </span>
                 )}
               </button>
+              {loading && (
+                <div style={{ fontSize: '11px', color: '#94a3b8', textAlign: 'center', marginTop: '8px', lineHeight: '1.4' }}>
+                  Connecting to live API. If server was asleep, please allow 10-15s to spin up.
+                </div>
+              )}
 
               {requiresMfa && (
                 <button

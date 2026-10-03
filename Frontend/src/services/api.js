@@ -51,6 +51,18 @@ const INITIAL_RECORDS = [
   }
 ]
 
+// Helper to detect demo or offline session tokens
+export const isDemoToken = (token) => {
+  if (!token) return false
+  return (
+    token.startsWith('mock_') ||
+    token.includes('.instant') ||
+    token.startsWith('demo_') ||
+    token === 'demo-session-token'
+  )
+}
+
+
 // LocalStorage helpers for standalone demo mode
 const getLocalRecords = () => {
   try {
@@ -76,7 +88,7 @@ const saveLocalRecords = (records) => {
 // Axios instance with timeout for fast failover
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 15000,
+  timeout: 45000,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -99,10 +111,19 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     const isAuthEndpoint = error.config?.url?.includes('/auth/')
+    const token = localStorage.getItem('token')
+
+    // If using a demo session, NEVER kick user out to login page
+    if (isDemoToken(token)) {
+      return Promise.reject(error)
+    }
+
     if (error.response?.status === 401 && !isAuthEndpoint) {
-      localStorage.removeItem('token')
-      localStorage.removeItem('user')
-      window.location.href = '/login'
+      if (window.location.pathname !== '/login') {
+        localStorage.removeItem('token')
+        localStorage.removeItem('user')
+        window.location.href = '/login'
+      }
     }
     return Promise.reject(error)
   }
@@ -206,6 +227,10 @@ export const authService = {
 // Records Services with resilience & export capability
 export const recordsService = {
   getAll: async () => {
+    const token = localStorage.getItem('token')
+    if (isDemoToken(token)) {
+      return getLocalRecords()
+    }
     try {
       const response = await api.get('/records')
       isBackendReachable = true
@@ -222,6 +247,13 @@ export const recordsService = {
   },
 
   getById: async (id) => {
+    const token = localStorage.getItem('token')
+    if (isDemoToken(token)) {
+      const records = getLocalRecords()
+      const found = records.find(r => r.id === parseInt(id, 10))
+      if (!found) throw new Error('Record not found')
+      return found
+    }
     try {
       const response = await api.get(`/records/${id}`)
       return response.data
@@ -234,6 +266,23 @@ export const recordsService = {
   },
 
   create: async (record) => {
+    const token = localStorage.getItem('token')
+    if (isDemoToken(token)) {
+      const records = getLocalRecords()
+      const newId = records.length > 0 ? Math.max(...records.map(r => r.id || 0)) + 1 : 1
+      const newRecord = {
+        id: newId,
+        name: record.name,
+        email: record.email,
+        mobile: record.mobile,
+        address: record.address,
+        createdAt: new Date().toISOString(),
+        updatedAt: null
+      }
+      const updated = [newRecord, ...records]
+      saveLocalRecords(updated)
+      return newRecord
+    }
     try {
       const response = await api.post('/records', record)
       return response.data
@@ -241,7 +290,7 @@ export const recordsService = {
       if (error.response?.data) throw error.response.data
       // Fallback local save
       const records = getLocalRecords()
-      const newId = records.length > 0 ? Math.max(...records.map(r => r.id)) + 1 : 1
+      const newId = records.length > 0 ? Math.max(...records.map(r => r.id || 0)) + 1 : 1
       const newRecord = {
         id: newId,
         name: record.name,
@@ -258,6 +307,23 @@ export const recordsService = {
   },
 
   update: async (id, record) => {
+    const token = localStorage.getItem('token')
+    if (isDemoToken(token)) {
+      const records = getLocalRecords()
+      const index = records.findIndex(r => r.id === parseInt(id, 10))
+      if (index === -1) throw new Error('Record not found')
+      const updatedRecord = {
+        ...records[index],
+        name: record.name,
+        email: record.email,
+        mobile: record.mobile,
+        address: record.address,
+        updatedAt: new Date().toISOString()
+      }
+      records[index] = updatedRecord
+      saveLocalRecords(records)
+      return updatedRecord
+    }
     try {
       const response = await api.put(`/records/${id}`, record)
       return response.data
@@ -282,6 +348,13 @@ export const recordsService = {
   },
 
   delete: async (id) => {
+    const token = localStorage.getItem('token')
+    if (isDemoToken(token)) {
+      const records = getLocalRecords()
+      const filtered = records.filter(r => r.id !== parseInt(id, 10))
+      saveLocalRecords(filtered)
+      return { success: true, message: 'Record deleted' }
+    }
     try {
       const response = await api.delete(`/records/${id}`)
       return response.data
