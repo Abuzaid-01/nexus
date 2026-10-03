@@ -76,7 +76,7 @@ const saveLocalRecords = (records) => {
 // Axios instance with timeout for fast failover
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 3000,
+  timeout: 15000,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -111,7 +111,7 @@ let isBackendReachable = true
 export const checkBackendHealth = async () => {
   try {
     const res = await axios.get(`${API_BASE_URL}/records`, {
-      timeout: 2000,
+      timeout: 8000,
       headers: { Authorization: `Bearer ${localStorage.getItem('token') || ''}` }
     })
     isBackendReachable = true

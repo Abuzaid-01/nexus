@@ -56,14 +56,25 @@ builder.Services.AddAuthentication(options =>
 // Configure CORS
 builder.Services.AddCors(options =>
 {
-    var allowedOrigins = builder.Configuration
-        .GetSection("Cors:AllowedOrigins")
-        .Get<string[]>()
-        ?? new[] { "http://localhost:3000", "http://localhost:5173" };
-
     options.AddPolicy("AllowReactApp", policy =>
     {
-        policy.WithOrigins(allowedOrigins)
+        policy.SetIsOriginAllowed(origin =>
+              {
+                  if (string.IsNullOrEmpty(origin)) return false;
+                  try
+                  {
+                      var uri = new Uri(origin);
+                      return uri.Host == "localhost"
+                          || uri.Host == "127.0.0.1"
+                          || uri.Host.EndsWith("netlify.app", StringComparison.OrdinalIgnoreCase)
+                          || uri.Host.EndsWith("onrender.com", StringComparison.OrdinalIgnoreCase)
+                          || origin.Contains("nex-suss.netlify.app");
+                  }
+                  catch
+                  {
+                      return false;
+                  }
+              })
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();
