@@ -561,3 +561,91 @@
   border-color: #e3dfd6;
   color: #68716e;
 }
+
+/* Auth Mode Tabs (Sign In / Create Account) */
+.auth-tabs {
+  display: flex;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 4px;
+  margin-bottom: 22px;
+  gap: 4px;
+}
+
+.auth-tab {
+  flex: 1;
+  padding: 8px 12px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  border-radius: 7px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted, #94a3b8);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+}
+
+.auth-tab:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.auth-tab.active {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+.auth-switch-prompt {
+  text-align: center;
+  margin-top: 14px;
+  font-size: 0.83rem;
+  color: var(--text-muted, #94a3b8);
+}
+
+.auth-switch-prompt .inline-link {
+  color: #58D6A5;
+  font-weight: 600;
+  text-decoration: underline;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  margin-left: 4px;
+  font-size: inherit;
+  transition: color 0.15s ease;
+}
+
+.auth-switch-prompt .inline-link:hover {
+  color: #6ee7b7;
+}
+
+/* Light Theme overrides for tabs */
+:root[data-theme="light"] .login-root .auth-tabs {
+  background: #edeae2;
+  border-color: #ddd9cf;
+}
+
+:root[data-theme="light"] .login-root .auth-tab {
+  color: #68716e;
+}
+
+:root[data-theme="light"] .login-root .auth-tab:hover {
+  color: #182020;
+}
+
+:root[data-theme="light"] .login-root .auth-tab.active {
+  background: #ffffff;
+  color: #182020;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+:root[data-theme="light"] .login-root .auth-switch-prompt {
+  color: #68716e;
+}
+
+:root[data-theme="light"] .login-root .auth-switch-prompt .inline-link {
+  color: #0d9488;
+}

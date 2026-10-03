@@ -209,7 +209,19 @@ export const authService = {
       return response.data
     } catch (error) {
       if (error.response?.data) throw error.response.data
-      return { success: true, message: 'User registered in demo store' }
+      
+      // Standalone / offline storage support so any user can register even without backend
+      try {
+        const users = JSON.parse(localStorage.getItem('crud_local_users') || '[]')
+        if (users.some(u => u.email.toLowerCase() === email.toLowerCase())) {
+          throw { message: 'User already exists with this email' }
+        }
+        users.push({ email, password, createdAt: new Date().toISOString() })
+        localStorage.setItem('crud_local_users', JSON.stringify(users))
+      } catch (e) {
+        if (e.message) throw e
+      }
+      return { success: true, message: 'Account registered successfully!' }
     }
   },
 

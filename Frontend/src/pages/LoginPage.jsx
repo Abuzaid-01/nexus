@@ -36,6 +36,8 @@ const LoginPage = () => {
   const [mfaCode, setMfaCode] = useState('')
   const [showForgotPassword, setShowForgotPassword] = useState(false)
   const [forgotEmail, setForgotEmail] = useState('')
+  const [isRegisterMode, setIsRegisterMode] = useState(false)
+  const [confirmPassword, setConfirmPassword] = useState('')
 
   // Pre-warm live backend on mount to reduce Render free-tier spin-up latency
   useEffect(() => {
@@ -76,10 +78,50 @@ const LoginPage = () => {
     const password = formData.password.trim()
 
     if (!email || !password) {
-      toast.error('Please enter your username/email and password')
+      toast.error('Please enter your email and password')
       return
     }
 
+    // REGISTRATION FLOW (Anyone can create an account)
+    if (isRegisterMode) {
+      if (password.length < 6) {
+        toast.error('Password must be at least 6 characters long')
+        return
+      }
+      if (password !== confirmPassword) {
+        toast.error('Passwords do not match')
+        return
+      }
+
+      setLoading(true)
+      try {
+        const regRes = await authService.register(email, password)
+        toast.success(regRes?.message || 'Account created successfully!')
+
+        // Automatically log in newly created user
+        const loginRes = await authService.login(email, password, true)
+        if (loginRes.success && loginRes.token) {
+          login(loginRes.user || { id: Date.now(), email }, loginRes.token)
+          toast.success(`Welcome to your workspace!`)
+          navigate('/dashboard', { replace: true })
+        } else {
+          setIsRegisterMode(false)
+          toast.info('Please enter your credentials to sign in')
+        }
+      } catch (error) {
+        console.error('Registration error:', error)
+        const errorMsg =
+          error?.message ||
+          error?.title ||
+          (typeof error === 'string' ? error : 'Registration failed')
+        toast.error(errorMsg)
+      } finally {
+        setLoading(false)
+      }
+      return
+    }
+
+    // LOGIN FLOW
     setLoading(true)
     try {
       const response = await authService.login(
@@ -105,7 +147,11 @@ const LoginPage = () => {
         error?.message ||
         error?.title ||
         (typeof error === 'string' ? error : 'Invalid username or password')
-      toast.error(errorMsg)
+      if (errorMsg.toLowerCase().includes('invalid email or password')) {
+        toast.error('Account not found or password incorrect. If you are new, click "Create Account" above!')
+      } else {
+        toast.error(errorMsg)
+      }
     } finally {
       setLoading(false)
     }
@@ -164,13 +210,32 @@ const LoginPage = () => {
 
         {/* Card Body */}
         <div className="auth-card">
+          {!showForgotPassword && !requiresMfa && (
+            <div className="auth-tabs">
+              <button
+                type="button"
+                className={`auth-tab ${!isRegisterMode ? 'active' : ''}`}
+                onClick={() => setIsRegisterMode(false)}
+              >
+                Sign In
+              </button>
+              <button
+                type="button"
+                className={`auth-tab ${isRegisterMode ? 'active' : ''}`}
+                onClick={() => setIsRegisterMode(true)}
+              >
+                Create Account
+              </button>
+            </div>
+          )}
+
           {!showForgotPassword ? (
             <form onSubmit={handleSubmit} className="auth-form">
               {!requiresMfa ? (
                 <>
                   <div className="card-headline">
-                    <h2>Sign in to workspace</h2>
-                    <p>Enter your credentials to continue to the console</p>
+                    <h2>{isRegisterMode ? 'Create workspace account' : 'Sign in to workspace'}</h2>
+                    <p>{isRegisterMode ? 'Sign up with any email address to manage your records' : 'Enter your credentials to continue to the console'}</p>
                   </div>
 
                   {/* Username / Email */}
@@ -198,15 +263,17 @@ const LoginPage = () => {
                   <div className="input-group">
                     <div className="label-row">
                       <label htmlFor="password" className="input-label">
-                        Password
+                        {isRegisterMode ? 'Create Password' : 'Password'}
                       </label>
-                      <button
-                        type="button"
-                        className="link-btn"
-                        onClick={() => setShowForgotPassword(true)}
-                      >
-                        Forgot Password?
-                      </button>
+                      {!isRegisterMode && (
+                        <button
+                          type="button"
+                          className="link-btn"
+                          onClick={() => setShowForgotPassword(true)}
+                        >
+                          Forgot Password?
+                        </button>
+                      )}
                     </div>
                     <div className="input-field-wrap">
                       <Lock size={16} className="input-icon" />
@@ -215,7 +282,7 @@ const LoginPage = () => {
                         id="password"
                         name="password"
                         className="text-input with-toggle"
-                        placeholder="Enter your password"
+                        placeholder={isRegisterMode ? 'At least 6 characters' : 'Enter your password'}
                         value={formData.password}
                         onChange={handleChange}
                         required
@@ -231,19 +298,43 @@ const LoginPage = () => {
                     </div>
                   </div>
 
-                  {/* Remember Me */}
-                  <div className="options-row">
-                    <label className="checkbox-wrap">
-                      <input
-                        type="checkbox"
-                        name="rememberMe"
-                        checked={formData.rememberMe}
-                        onChange={handleChange}
-                      />
-                      <span className="checkbox-custom"></span>
-                      <span className="checkbox-label-text">Remember this session</span>
-                    </label>
-                  </div>
+                  {/* Confirm Password (only for Register) */}
+                  {isRegisterMode && (
+                    <div className="input-group">
+                      <label htmlFor="confirmPassword" className="input-label">
+                        Confirm Password
+                      </label>
+                      <div className="input-field-wrap">
+                        <Lock size={16} className="input-icon" />
+                        <input
+                          type={showPassword ? 'text' : 'password'}
+                          id="confirmPassword"
+                          name="confirmPassword"
+                          className="text-input"
+                          placeholder="Repeat your password"
+                          value={confirmPassword}
+                          onChange={(e) => setConfirmPassword(e.target.value)}
+                          required
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Remember Me (only for Login) */}
+                  {!isRegisterMode && (
+                    <div className="options-row">
+                      <label className="checkbox-wrap">
+                        <input
+                          type="checkbox"
+                          name="rememberMe"
+                          checked={formData.rememberMe}
+                          onChange={handleChange}
+                        />
+                        <span className="checkbox-custom"></span>
+                        <span className="checkbox-label-text">Remember this session</span>
+                      </label>
+                    </div>
+                  )}
                 </>
               ) : (
                 /* MFA Verification Screen */
@@ -272,7 +363,7 @@ const LoginPage = () => {
                 </div>
               )}
 
-              {/* Login button */}
+              {/* Submit button */}
               <button
                 type="submit"
                 className="submit-btn"
@@ -281,11 +372,15 @@ const LoginPage = () => {
                 {loading ? (
                   <span className="loading-state">
                     <RefreshCw size={16} className="spin-fast" />
-                    Connecting to Cloud API...
+                    {isRegisterMode ? 'Creating Account...' : 'Connecting to Cloud API...'}
                   </span>
                 ) : (
                   <span className="btn-content">
-                    {requiresMfa ? 'Verify Security Code' : 'Sign in to Console'}
+                    {requiresMfa
+                      ? 'Verify Security Code'
+                      : isRegisterMode
+                      ? 'Create Account & Sign In'
+                      : 'Sign in to Console'}
                     <ArrowRight size={16} />
                   </span>
                 )}
@@ -293,6 +388,35 @@ const LoginPage = () => {
               {loading && (
                 <div style={{ fontSize: '11px', color: '#94a3b8', textAlign: 'center', marginTop: '8px', lineHeight: '1.4' }}>
                   Connecting to live API. If server was asleep, please allow 10-15s to spin up.
+                </div>
+              )}
+
+              {/* Mode switch helper link */}
+              {!requiresMfa && (
+                <div className="auth-switch-prompt">
+                  {isRegisterMode ? (
+                    <>
+                      Already have an account?{' '}
+                      <button
+                        type="button"
+                        className="link-btn inline-link"
+                        onClick={() => setIsRegisterMode(false)}
+                      >
+                        Sign in here
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      Don't have an account?{' '}
+                      <button
+                        type="button"
+                        className="link-btn inline-link"
+                        onClick={() => setIsRegisterMode(true)}
+                      >
+                        Create one now
+                      </button>
+                    </>
+                  )}
                 </div>
               )}
 
